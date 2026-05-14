@@ -1,0 +1,28 @@
+name: jogo_da_cobrinha
+description: "Um novo projeto Flutter profissional de Snake."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.37.0
+  flame_audio: ^2.12.1
+  google_fonts: ^6.2.1
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/eat.mp3
+    - assets/audio/game_over.mp3
+
+shared_preferences: ^2.2.3
