@@ -1,5 +1,3 @@
-// lib/overlays/game_over_overlay.dart
-
 import 'package:flutter/material.dart';
 
 import '../game/snake_game.dart';
@@ -18,25 +16,36 @@ class GameOverOverlay extends StatelessWidget {
       color: Colors.black.withOpacity(0.85),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(32),
-          margin: const EdgeInsets.all(24),
+          width: 420,
+          padding: const EdgeInsets.all(30),
           decoration: BoxDecoration(
             color: const Color(0xFF111827),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius:
+                BorderRadius.circular(30),
             border: Border.all(
               color: game.snakeColor,
               width: 3,
             ),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+                MainAxisSize.min,
             children: [
-              Text(
+              const Icon(
+                Icons.close_rounded,
+                color: Colors.redAccent,
+                size: 80,
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
                 'GAME OVER',
                 style: TextStyle(
-                  color: game.snakeColor,
-                  fontSize: 42,
-                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  fontSize: 38,
+                  fontWeight:
+                      FontWeight.w900,
                 ),
               ),
 
@@ -44,43 +53,67 @@ class GameOverOverlay extends StatelessWidget {
 
               Text(
                 game.currentGameOverMessage,
-                textAlign: TextAlign.center,
+                textAlign:
+                    TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white70,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  fontWeight:
+                      FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 25),
 
               Text(
-                'SCORE ${game.score}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                'SCORE: ${game.score}',
+                style: TextStyle(
+                  color:
+                      game.snakeColor,
+                  fontSize: 24,
+                  fontWeight:
+                      FontWeight.w900,
                 ),
               ),
 
               const SizedBox(height: 10),
 
               Text(
-                'RECORD ${game.highScore}',
+                'RECORD: ${game.highScore}',
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: Colors.white,
                   fontSize: 18,
+                  fontWeight:
+                      FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 35),
+              const SizedBox(height: 30),
 
               ElevatedButton(
                 onPressed: () {
                   game.resetGame();
                 },
+                style:
+                    ElevatedButton.styleFrom(
+                  backgroundColor:
+                      game.snakeColor,
+                  foregroundColor:
+                      Colors.black,
+                ),
                 child: const Text(
-                  'PLAY AGAIN',
+                  'JOGAR NOVAMENTE',
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'MENU',
                 ),
               ),
             ],

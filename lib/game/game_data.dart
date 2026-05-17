@@ -1,5 +1,3 @@
-// lib/game/game_data.dart
-
 import 'package:flutter/material.dart';
 
 enum GameMode {
@@ -11,9 +9,6 @@ enum GameMode {
   infinity,
   multiplayer,
   randomMix,
-  survival,
-  impossible,
-  ghost,
 }
 
 class SnakeSkin {
@@ -41,17 +36,14 @@ final skins = [
     name: 'NEON',
     color: Colors.greenAccent,
   ),
-
   SnakeSkin(
     name: 'FIRE',
     color: Colors.orangeAccent,
   ),
-
   SnakeSkin(
     name: 'ICE',
     color: Colors.cyanAccent,
   ),
-
   SnakeSkin(
     name: 'PINK',
     color: Colors.pinkAccent,
@@ -60,17 +52,11 @@ final skins = [
 
 final skills = [
   Skill(
-    name: 'DASH',
+    name: 'BOOST',
     icon: Icons.flash_on,
   ),
-
   Skill(
     name: 'GHOST',
     icon: Icons.visibility_off,
-  ),
-
-  Skill(
-    name: 'MAGNET',
-    icon: Icons.blur_circular,
   ),
 ];
