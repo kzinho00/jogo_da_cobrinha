@@ -1,3 +1,5 @@
+// lib/game/game_data.dart
+
 import 'package:flutter/material.dart';
 
 enum GameMode {
@@ -16,94 +18,59 @@ enum GameMode {
 
 class SnakeSkin {
   final String name;
-
   final Color color;
 
-  final int price;
-
-  final bool unlocked;
-
-  const SnakeSkin({
+  SnakeSkin({
     required this.name,
     required this.color,
-    required this.price,
-    required this.unlocked,
   });
 }
 
 class Skill {
   final String name;
-
   final IconData icon;
 
-  final String description;
-
-  const Skill({
+  Skill({
     required this.name,
     required this.icon,
-    required this.description,
   });
 }
 
-final List<SnakeSkin> skins = [
-  const SnakeSkin(
+final skins = [
+  SnakeSkin(
     name: 'NEON',
     color: Colors.greenAccent,
-    price: 0,
-    unlocked: true,
   ),
 
-  const SnakeSkin(
+  SnakeSkin(
     name: 'FIRE',
     color: Colors.orangeAccent,
-    price: 250,
-    unlocked: false,
   ),
 
-  const SnakeSkin(
+  SnakeSkin(
     name: 'ICE',
-    color: Colors.lightBlueAccent,
-    price: 400,
-    unlocked: false,
+    color: Colors.cyanAccent,
   ),
 
-  const SnakeSkin(
-    name: 'VOID',
-    color: Colors.purpleAccent,
-    price: 700,
-    unlocked: false,
-  ),
-
-  const SnakeSkin(
-    name: 'GOLD',
-    color: Colors.amber,
-    price: 1200,
-    unlocked: false,
+  SnakeSkin(
+    name: 'PINK',
+    color: Colors.pinkAccent,
   ),
 ];
 
-final List<Skill> skills = [
-  const Skill(
+final skills = [
+  Skill(
     name: 'DASH',
     icon: Icons.flash_on,
-    description: 'Speed boost',
   ),
 
-  const Skill(
+  Skill(
     name: 'GHOST',
     icon: Icons.visibility_off,
-    description: 'Pass through walls',
   ),
 
-  const Skill(
+  Skill(
     name: 'MAGNET',
     icon: Icons.blur_circular,
-    description: 'Pull apples',
-  ),
-
-  const Skill(
-    name: 'SLOW TIME',
-    icon: Icons.hourglass_bottom,
-    description: 'Slow motion',
   ),
 ];

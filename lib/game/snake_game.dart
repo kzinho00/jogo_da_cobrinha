@@ -1,12 +1,25 @@
+// lib/game/snake_game.dart
+
 import 'dart:async' as async;
 import 'dart:math' as math;
 
-import 'package:flame/game.dart';
 import 'package:flame/components.dart';
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'game_data.dart';
+
+class Bullet {
+  Bullet({
+    required this.position,
+    required this.direction,
+  });
+
+  Vector2 position;
+
+  Vector2 direction;
+}
 
 class SnakeStarvingGame extends FlameGame {
   SnakeStarvingGame({
@@ -31,6 +44,10 @@ class SnakeStarvingGame extends FlameGame {
 
   List<Vector2> snake = [];
 
+  List<Vector2> obstacles = [];
+
+  List<Bullet> bullets = [];
+
   Vector2 direction = Vector2(1, 0);
 
   Vector2 nextDirection = Vector2(1, 0);
@@ -39,11 +56,17 @@ class SnakeStarvingGame extends FlameGame {
 
   Vector2? specialFood;
 
+  Vector2? goldenFood;
+
   int score = 0;
+
+  int coins = 0;
 
   int combo = 0;
 
-  int coins = 0;
+  int highScore = 0;
+
+  int ammo = 0;
 
   bool gameOver = false;
 
@@ -53,13 +76,21 @@ class SnakeStarvingGame extends FlameGame {
 
   double pulse = 0;
 
-  double backgroundPulse = 0;
-
   double accumulator = 0;
 
   late double moveInterval;
 
   async.Timer? fruitTimer;
+
+  final List<String> gameOverMessages = [
+    'Quase! Tente novamente.',
+    'Você consegue bater o recorde.',
+    'Mais uma partida?',
+    'Continue evoluindo.',
+    'Você foi longe.',
+  ];
+
+  String currentGameOverMessage = '';
 
   @override
   Future<void> onLoad() async {
@@ -79,24 +110,24 @@ class SnakeStarvingGame extends FlameGame {
         break;
 
       case GameMode.timeAttack:
-        moveInterval = 0.09;
+        moveInterval = 0.10;
         break;
 
       case GameMode.chaos:
         moveInterval = 0.07;
         break;
 
-      case GameMode.randomMix:
-        moveInterval = 0.1;
-        break;
-
       case GameMode.infinity:
-        moveInterval = 0.12;
+        moveInterval = 0.11;
         infinityMode = true;
         break;
 
       case GameMode.multiplayer:
-        moveInterval = 0.12;
+        moveInterval = 0.10;
+        break;
+
+      case GameMode.randomMix:
+        moveInterval = 0.09;
         break;
 
       case GameMode.survival:
@@ -122,9 +153,19 @@ class SnakeStarvingGame extends FlameGame {
   void resetGame() {
     score = 0;
 
+    coins = 0;
+
     combo = 0;
 
+    ammo = 0;
+
     gameOver = false;
+
+    paused = false;
+
+    bullets.clear();
+
+    obstacles.clear();
 
     snake = [
       Vector2(10, 10),
@@ -138,7 +179,11 @@ class SnakeStarvingGame extends FlameGame {
 
     spawnFood();
 
+    spawnObstacles();
+
     overlays.remove('GameOver');
+
+    overlays.remove('PauseMenu');
 
     resumeEngine();
   }
@@ -149,10 +194,44 @@ class SnakeStarvingGame extends FlameGame {
       random.nextInt(gridSize).toDouble(),
     );
 
-    if (random.nextDouble() > 0.7) {
+    if (random.nextDouble() > 0.65) {
       specialFood = Vector2(
         random.nextInt(gridSize).toDouble(),
         random.nextInt(gridSize).toDouble(),
+      );
+    }
+
+    if (random.nextDouble() > 0.8) {
+      goldenFood = Vector2(
+        random.nextInt(gridSize).toDouble(),
+        random.nextInt(gridSize).toDouble(),
+      );
+    }
+  }
+
+  void spawnObstacles() {
+    obstacles.clear();
+
+    int amount = 0;
+
+    if (mode == GameMode.hardcore) {
+      amount = 10;
+    }
+
+    if (mode == GameMode.chaos) {
+      amount = 15;
+    }
+
+    if (mode == GameMode.impossible) {
+      amount = 25;
+    }
+
+    for (int i = 0; i < amount; i++) {
+      obstacles.add(
+        Vector2(
+          random.nextInt(gridSize).toDouble(),
+          random.nextInt(gridSize).toDouble(),
+        ),
       );
     }
   }
@@ -161,11 +240,11 @@ class SnakeStarvingGame extends FlameGame {
     int milliseconds = 3000;
 
     if (mode == GameMode.hardcore) {
-      milliseconds = 1600;
+      milliseconds = 2200;
     }
 
     if (mode == GameMode.impossible) {
-      milliseconds = 900;
+      milliseconds = 1200;
     }
 
     fruitTimer?.cancel();
@@ -190,14 +269,14 @@ class SnakeStarvingGame extends FlameGame {
 
     pulse += dt * 6;
 
-    backgroundPulse += dt * 2;
-
     accumulator += dt;
 
     if (accumulator >= moveInterval) {
       accumulator = 0;
 
       moveSnake();
+
+      updateBullets();
     }
   }
 
@@ -224,16 +303,28 @@ class SnakeStarvingGame extends FlameGame {
       }
     }
 
-    final collided =
-        (!infinityMode &&
-                (newHead.x < 0 ||
-                    newHead.y < 0 ||
-                    newHead.x >= gridSize ||
-                    newHead.y >= gridSize)) ||
-            snake.contains(newHead);
+    final wallCollision =
+        !infinityMode &&
+        (
+          newHead.x < 0 ||
+          newHead.y < 0 ||
+          newHead.x >= gridSize ||
+          newHead.y >= gridSize
+        );
 
-    if (collided) {
+    final selfCollision =
+        snake.contains(newHead);
+
+    final obstacleCollision =
+        obstacles.contains(newHead);
+
+    if (
+      wallCollision ||
+      selfCollision ||
+      obstacleCollision
+    ) {
       finishGame();
+
       return;
     }
 
@@ -247,24 +338,117 @@ class SnakeStarvingGame extends FlameGame {
       combo++;
 
       spawnFood();
-    } else if (specialFood != null &&
-        newHead == specialFood) {
-      score += 50;
+    }
+
+    else if (
+        specialFood != null &&
+        newHead == specialFood
+    ) {
+      score += 40;
 
       coins += 10;
 
-      combo += 3;
+      ammo += 3;
 
       specialFood = null;
-    } else {
+    }
+
+    else if (
+        goldenFood != null &&
+        newHead == goldenFood
+    ) {
+      score += 100;
+
+      coins += 25;
+
+      ammo += 3;
+
+      goldenFood = null;
+    }
+
+    else {
       snake.removeLast();
+    }
+
+    if (score > highScore) {
+      highScore = score;
     }
   }
 
+  void updateBullets() {
+    final bulletsToRemove = <Bullet>[];
+
+    final obstaclesToRemove = <Vector2>[];
+
+    for (final bullet in bullets) {
+      bullet.position += bullet.direction;
+
+      for (final obstacle in obstacles) {
+        if (
+          obstacle.x == bullet.position.x &&
+          obstacle.y == bullet.position.y
+        ) {
+          bulletsToRemove.add(bullet);
+
+          obstaclesToRemove.add(obstacle);
+
+          score += 5;
+
+          break;
+        }
+      }
+
+      if (
+        bullet.position.x < 0 ||
+        bullet.position.y < 0 ||
+        bullet.position.x >= gridSize ||
+        bullet.position.y >= gridSize
+      ) {
+        bulletsToRemove.add(bullet);
+      }
+    }
+
+    bullets.removeWhere(
+      (bullet) => bulletsToRemove.contains(bullet),
+    );
+
+    obstacles.removeWhere(
+      (obstacle) => obstaclesToRemove.contains(obstacle),
+    );
+  }
+
+  void shoot() {
+    if (ammo <= 0) {
+      return;
+    }
+
+    ammo--;
+
+    bullets.add(
+      Bullet(
+        position: snake.first.clone(),
+        direction: direction.clone(),
+      ),
+    );
+  }
+
   void finishGame() {
+    if (gameOver) return;
+
     gameOver = true;
 
+    paused = true;
+
+    currentGameOverMessage =
+        gameOverMessages[
+          random.nextInt(
+            gameOverMessages.length,
+          )
+        ];
+
     pauseEngine();
+
+    overlays.remove('PauseMenu');
 
     overlays.add('GameOver');
   }
@@ -280,9 +464,9 @@ class SnakeStarvingGame extends FlameGame {
   void resumeGame() {
     paused = false;
 
-    overlays.remove('PauseMenu');
-
     resumeEngine();
+
+    overlays.remove('PauseMenu');
   }
 
   void handleInput(KeyEvent event) {
@@ -292,31 +476,40 @@ class SnakeStarvingGame extends FlameGame {
 
     final key = event.logicalKey;
 
-    if ((key == LogicalKeyboardKey.arrowUp ||
-            key == LogicalKeyboardKey.keyW) &&
-        direction.y != 1) {
+    if (
+      (key == LogicalKeyboardKey.arrowUp ||
+       key == LogicalKeyboardKey.keyW) &&
+      direction.y != 1
+    ) {
       nextDirection = Vector2(0, -1);
     }
 
-    else if ((key ==
-                LogicalKeyboardKey.arrowDown ||
-            key == LogicalKeyboardKey.keyS) &&
-        direction.y != -1) {
+    else if (
+      (key == LogicalKeyboardKey.arrowDown ||
+       key == LogicalKeyboardKey.keyS) &&
+      direction.y != -1
+    ) {
       nextDirection = Vector2(0, 1);
     }
 
-    else if ((key ==
-                LogicalKeyboardKey.arrowLeft ||
-            key == LogicalKeyboardKey.keyA) &&
-        direction.x != 1) {
+    else if (
+      (key == LogicalKeyboardKey.arrowLeft ||
+       key == LogicalKeyboardKey.keyA) &&
+      direction.x != 1
+    ) {
       nextDirection = Vector2(-1, 0);
     }
 
-    else if ((key ==
-                LogicalKeyboardKey.arrowRight ||
-            key == LogicalKeyboardKey.keyD) &&
-        direction.x != -1) {
+    else if (
+      (key == LogicalKeyboardKey.arrowRight ||
+       key == LogicalKeyboardKey.keyD) &&
+      direction.x != -1
+    ) {
       nextDirection = Vector2(1, 0);
+    }
+
+    if (key == LogicalKeyboardKey.space) {
+      shoot();
     }
 
     if (key == LogicalKeyboardKey.escape) {
@@ -334,32 +527,29 @@ class SnakeStarvingGame extends FlameGame {
 
     final cellSize = size.x / gridSize;
 
-    final rect = Rect.fromLTWH(
-      0,
-      0,
-      size.x,
-      size.y,
-    );
-
-    final backgroundGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color.lerp(
-          const Color(0xFF020617),
-          const Color(0xFF0F172A),
-          (math.sin(backgroundPulse) + 1) / 2,
-        )!,
-        const Color(0xFF111827),
-        const Color(0xFF1E293B),
-      ],
-    );
-
     final backgroundPaint = Paint()
-      ..shader = backgroundGradient.createShader(rect);
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFF020617),
+          Color(0xFF0F172A),
+          Color(0xFF111827),
+        ],
+      ).createShader(
+        Rect.fromLTWH(
+          0,
+          0,
+          size.x,
+          size.y,
+        ),
+      );
 
     canvas.drawRect(
-      rect,
+      Rect.fromLTWH(
+        0,
+        0,
+        size.x,
+        size.y,
+      ),
       backgroundPaint,
     );
 
@@ -379,6 +569,24 @@ class SnakeStarvingGame extends FlameGame {
           gridPaint,
         );
       }
+    }
+
+    for (final obstacle in obstacles) {
+      final obstaclePaint = Paint()
+        ..color = Colors.grey.shade800;
+
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            obstacle.x * cellSize,
+            obstacle.y * cellSize,
+            cellSize,
+            cellSize,
+          ),
+          const Radius.circular(8),
+        ),
+        obstaclePaint,
+      );
     }
 
     for (int i = snake.length - 1;
@@ -408,7 +616,7 @@ class SnakeStarvingGame extends FlameGame {
             width: cellSize * scale,
             height: cellSize * scale,
           ),
-          const Radius.circular(10),
+          const Radius.circular(12),
         ),
         snakePaint,
       );
@@ -430,7 +638,7 @@ class SnakeStarvingGame extends FlameGame {
 
     if (specialFood != null) {
       final specialPaint = Paint()
-        ..color = Colors.amberAccent;
+        ..color = Colors.blueAccent;
 
       canvas.drawCircle(
         Offset(
@@ -439,18 +647,50 @@ class SnakeStarvingGame extends FlameGame {
           specialFood!.y * cellSize +
               (cellSize / 2),
         ),
-        cellSize / 2.2,
+        cellSize / 2.5,
         specialPaint,
+      );
+    }
+
+    if (goldenFood != null) {
+      final goldPaint = Paint()
+        ..color = Colors.amber;
+
+      canvas.drawCircle(
+        Offset(
+          goldenFood!.x * cellSize +
+              (cellSize / 2),
+          goldenFood!.y * cellSize +
+              (cellSize / 2),
+        ),
+        cellSize / 2.3,
+        goldPaint,
+      );
+    }
+
+    for (final bullet in bullets) {
+      final bulletPaint = Paint()
+        ..color = Colors.cyanAccent;
+
+      canvas.drawCircle(
+        Offset(
+          bullet.position.x * cellSize +
+              (cellSize / 2),
+          bullet.position.y * cellSize +
+              (cellSize / 2),
+        ),
+        cellSize / 5,
+        bulletPaint,
       );
     }
 
     final hud = TextPainter(
       text: TextSpan(
         text:
-            'SCORE $score   COINS $coins',
+            'SCORE $score   RECORD $highScore   COINS $coins   TIROS $ammo',
         style: TextStyle(
           color: snakeColor,
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: FontWeight.w900,
         ),
       ),
